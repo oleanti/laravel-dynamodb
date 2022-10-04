@@ -133,7 +133,9 @@ class Connection extends BaseConnection
      */
     public function clientQuery($params)
     {
-        return $this->client->query($params);
+        $result = $this->client->query($params);
+        Events\QueryExecuted::dispatch($params, $result);
+        return $result;
     }
 
     /**
@@ -144,6 +146,10 @@ class Connection extends BaseConnection
      */
     public function __call($method, $parameters)
     {
-        return call_user_func_array([$this->client, $method], $parameters);
+        $result = call_user_func_array([$this->client, $method], $parameters);
+        if($method === 'getItem'){
+            Events\GetItemExecuted::dispatch($parameters, $result);
+        }
+        return $result;
     }
 }

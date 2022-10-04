@@ -3,6 +3,8 @@
 namespace Kitar\Dynamodb;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Support\Facades\Event;
 
 class DynamodbServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,36 @@ class DynamodbServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        if (config('app.debug')) {
+            try {
+                $dynamodbCollector = $this->app->make('Kitar\Dynamodb\Debugbar\DynamodbCollector');
+                $debugbar = \App::make('debugbar');
+                $debugbar->addCollector($dynamodbCollector);
+            } catch(BindingResolutionException $e){
+                // did not find debugbar
+            } catch (\Exception $e) {
+                throw new \Exception('Cannot add Dynamodb Collector: ' . $e->getMessage(), $e->getCode(), $e);
+
+            }
+            Event::listen(function (Events\QueryExecuted $event) {
+                $key = 'Query-'.microtime();
+                $data = [
+                    'params' => $event->params,
+                    'result' => $event->result
+                ];
+                $debugbar = \App::make('debugbar');
+                $debugbar['dynamodb']->data[$key] = $debugbar['dynamodb']->formatVar($data);
+            });
+            Event::listen(function (Events\GetItemExecuted $event) {
+                $key = 'GetItem-'.microtime();
+                $data = [
+                    'params' => $event->params,
+                    'result' => $event->result
+                ];
+                $debugbar = \App::make('debugbar');
+                $debugbar['dynamodb']->data[$key] = $debugbar['dynamodb']->formatVar($data);
+            });
+        }
     }
 
     /**

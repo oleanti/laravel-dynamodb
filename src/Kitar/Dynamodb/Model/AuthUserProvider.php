@@ -158,4 +158,8 @@ class AuthUserProvider implements BaseUserProvider
 
         return new $class;
     }
+    public function getModel()
+    {
+        return $this->model;
+    }
 }
